@@ -1,95 +1,84 @@
-import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import fragmentShader from './shaders/fragment.frag?raw'
-import vertexShader from './shaders/vertex.vert?raw'
 
-const size = {
-  width: window.innerWidth,
-  height: window.innerHeight,
-}
+import fragmentShader from './shader/fragment.frag?raw'
+import vertexShader from './shader/vertex.vert?raw'
 
-const mouse = {
-  x: 0,
-  y: 0,
-}
+import './style.css'
 
-const canvas = document.getElementById('webGL')
+class Sketch {
+  constructor(el) {
+    this.domElement = el
 
-const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera()
-const controls = new OrbitControls(camera, canvas)
-const renderer = new THREE.WebGLRenderer({ canvas })
-const clock = new THREE.Clock()
+    this.windowSize = new THREE.Vector2(
+      this.domElement.offsetWidth,
+      this.domElement.offsetHeight
+    )
 
-controls.enableDamping = true
+    this.scene = new THREE.Scene()
+    this.camera = new THREE.PerspectiveCamera(
+      75,
+      this.windowSize.x / this.windowSize.y,
+      0.1,
+      100
+    )
+    this.camera.position.z = 1
+    this.scene.add(this.camera)
 
-camera.fov = 75
-camera.aspect = size.width / size.height
-camera.far = 100
-camera.near = 0.1
-camera.position.set(1, 1, 1)
+    this.clock = new THREE.Clock()
 
-scene.add(camera)
+    this.renderer = new THREE.WebGLRenderer({ antialias: true })
+    this.domElement.append(this.renderer.domElement)
 
-const cubeGeometry = new THREE.BoxBufferGeometry(1, 1, 1)
-const cubeMaterial = new THREE.ShaderMaterial({
-  vertexShader,
-  fragmentShader,
-  uniforms: {
-    uTime: { value: 0 },
-  },
-})
-const cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial)
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+    this.controls.enableDamping = true
 
-cubeMaterial.color = new THREE.Color('#fa0')
-
-scene.add(cubeMesh)
-
-function resizeHandler() {
-  size.height = window.innerHeight
-  size.width = window.innerWidth
-
-  camera.aspect = size.width / size.height
-  camera.updateProjectionMatrix()
-
-  renderer.setSize(size.width, size.height)
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-}
-resizeHandler()
-
-window.addEventListener('resize', resizeHandler)
-
-function tick() {
-  const elapsedTime = clock.getElapsedTime()
-
-  cubeMaterial.uniforms.uTime.value = elapsedTime
-  cubeMesh.rotation.y = elapsedTime / 5.0
-
-  controls.update()
-
-  renderer.render(scene, camera)
-
-  window.requestAnimationFrame(tick)
-}
-tick()
-
-const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches
-const event = isTouch ? 'touchmove' : 'mousemove'
-let timeoutId
-window.addEventListener(event, e => {
-  if (isTouch && e.touches?.[0]) {
-    const touchEvent = e.touches[0]
-    mouse.x = (touchEvent.clientX / size.width) * 2 - 1
-    mouse.y = (-touchEvent.clientY / size.height) * 2 + 1
-  } else {
-    mouse.x = (e.clientX / size.width) * 2 - 1
-    mouse.y = (-e.clientY / size.height) * 2 + 1
+    this.addObject()
+    this.addEventListener()
+    this.resize()
+    this.render()
   }
 
-  clearTimeout(timeoutId)
-  timeoutId = setTimeout(() => {
-    mouse.x = 0
-    mouse.y = 0
-  }, 1000)
-})
+  addObject() {
+    this.geometry = new THREE.PlaneBufferGeometry(1, 1)
+    this.material = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      fragmentShader,
+      vertexShader,
+    })
+    this.mesh = new THREE.Mesh(this.geometry, this.material)
+
+    this.scene.add(this.mesh)
+  }
+
+  resize() {
+    this.windowSize.set(
+      this.domElement.offsetWidth,
+      this.domElement.offsetHeight
+    )
+
+    this.camera.aspect = this.windowSize.x / this.windowSize.y
+    this.camera.updateProjectionMatrix()
+
+    this.renderer.setSize(this.windowSize.x, this.windowSize.y)
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
+  }
+
+  addEventListener() {
+    window.addEventListener('resize', this.resize.bind(this))
+  }
+
+  render() {
+    const elapsedTime = this.clock.getElapsedTime()
+
+    this.material.uniforms.uTime.value = elapsedTime
+
+    this.controls.update()
+
+    this.renderer.render(this.scene, this.camera)
+
+    window.requestAnimationFrame(this.render.bind(this))
+  }
+}
+
+new Sketch(document.getElementById('app'))
