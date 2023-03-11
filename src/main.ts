@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 import fragmentShader from './shader/fragment.frag?raw'
 import vertexShader from './shader/vertex.vert?raw'
+import GUI from 'lil-gui'
 
 import './style.css'
 
@@ -17,6 +18,12 @@ class Sketch {
   private geometry: THREE.PlaneGeometry | null
   private material: THREE.ShaderMaterial | null
   private mesh: THREE.Mesh | null
+
+  private gui: GUI
+
+  config = {
+    animate: true,
+  }
 
   constructor(el: HTMLElement) {
     this.domElement = el
@@ -48,7 +55,10 @@ class Sketch {
     this.material = null
     this.mesh = null
 
+    this.gui = new GUI()
+
     this.addObject()
+    this.addGUI()
     this.addEventListener()
     this.resize()
     this.render()
@@ -64,6 +74,10 @@ class Sketch {
     this.mesh = new THREE.Mesh(this.geometry, this.material)
 
     this.scene.add(this.mesh)
+  }
+
+  addGUI() {
+    this.gui.add(this.config, 'animate').name('Animate')
   }
 
   resize() {
@@ -86,7 +100,7 @@ class Sketch {
   render() {
     const elapsedTime = this.clock.getElapsedTime()
 
-    if (this.material) {
+    if (this.material && this.config.animate) {
       this.material.uniforms.uTime.value = elapsedTime
     }
 
